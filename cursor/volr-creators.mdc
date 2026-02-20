@@ -1,0 +1,127 @@
+---
+description: Volr Checkout for creators — tips, subscriptions, digital goods
+globs:
+alwaysApply: false
+---
+
+# Volr Checkout — Creator Economy Integration
+
+> Specialized guide for content creators, digital product sellers, membership platforms, and tipping.
+
+## Use Case
+
+Creators selling digital products (courses, templates, art), accepting tips/donations, and running membership/subscription models with stablecoin payments. No platform cuts, instant payouts, global fan monetization.
+
+## Why Stablecoin Checkout for Creators?
+
+- **No platform fees**: Keep 99.5%+ of revenue vs 70-80% on platforms
+- **Instant payouts**: No 30-60 day payment holds
+- **Global monetization**: Accept from fans worldwide without payment restrictions
+- **No minimum payout**: Receive any amount directly to your wallet
+- **Censorship resistant**: No account freezes or payment processor restrictions
+
+## Integration Pattern
+
+### 1. Project Setup
+
+```bash
+volr project create --type checkout --name "Creator Store"
+volr checkout setup
+```
+
+### 2. Digital Product Sale
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.CREATOR_WALLET!,
+  fiatAmount: '29.99',
+  fiatCurrency: 'USD',
+  itemName: 'Ultimate Design System Template',
+  itemDescription: 'Figma + React component library — lifetime access',
+  itemImageUrl: 'https://creator.com/product-preview.jpg',
+  referenceId: `purchase_${purchaseId}`,
+  customerEmail: buyer.email,
+  expiryMinutes: 30,
+  successUrl: 'https://creator.com/download',
+  metadata: {
+    productId: product.id,
+    productType: 'digital_download',
+    buyerId: buyer.id,
+  },
+});
+```
+
+### 3. Tip / Donation (Open Amount)
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.CREATOR_WALLET!,
+  amount: tipAmountInWei,  // User-selected amount
+  amountMode: 'FIXED',
+  itemName: `Tip for ${creatorName}`,
+  itemDescription: 'Thank you for your support!',
+  referenceId: `tip_${tipId}`,
+  expiryMinutes: 15,
+  metadata: {
+    type: 'tip',
+    creatorId: creator.id,
+    message: tipMessage,
+  },
+});
+```
+
+### 4. Webhook — Delivery
+
+```typescript
+case 'checkout.paid':
+  const { metadata, customerEmail, referenceId } = event.data;
+
+  if (metadata!.productType === 'digital_download') {
+    const downloadLink = await generateDownloadLink(metadata!.productId);
+    await sendDownloadEmail(customerEmail!, downloadLink);
+  } else if (metadata!.type === 'tip') {
+    await recordTip(metadata!.creatorId, event.data.paidAmount!);
+    await notifyCreator(metadata!.creatorId, event.data.paidAmount!, metadata!.message);
+  }
+  break;
+```
+
+## Creator-Specific Tips
+
+- **Digital delivery**: Generate time-limited download links in the `checkout.paid` webhook
+- **Tip jars**: Use a fixed set of amount options (e.g., $5, $10, $25, custom)
+- **Membership**: Create recurring checkouts with your own billing logic
+- **Social proof**: Show recent purchases/tips on your page using `volr.list()`
+- **Multi-chain**: Offer Base (low fees) as default, with Polygon/Arbitrum as alternatives
+
+### Payment Link Generator
+
+Simple payment link for social media / bio links:
+
+```typescript
+// Generate a reusable checkout for a product
+async function createPaymentLink(product: Product) {
+  const checkout = await volr.create({
+    chainId: 8453,
+    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    merchantAddress: process.env.CREATOR_WALLET!,
+    fiatAmount: product.price.toString(),
+    fiatCurrency: 'USD',
+    itemName: product.name,
+    itemImageUrl: product.imageUrl,
+    referenceId: `product_${product.id}_${Date.now()}`,
+    expiryMinutes: 1440,  // 24 hours for async purchases
+  });
+
+  return `https://checkout.volr.io/${checkout.id}`;
+}
+```
+
+## Resources
+
+- [Base guide](./volr-checkout-base.md)
+- [Webhook docs](https://docs.volr.io/checkout-api/webhooks)

@@ -1,0 +1,535 @@
+# Volr Checkout Integration Rules
+
+> Context for Windsurf AI when working on Volr Checkout integrations.
+
+---
+
+# Volr Checkout Integration Guide
+
+> Common guide for integrating stablecoin checkout payments via Volr.
+
+## What is Volr Checkout?
+
+Volr Checkout is a server-side API + hosted checkout page for accepting stablecoin payments (USDC, USDT) on EVM chains. You create a checkout via API, redirect your customer to the hosted page, and receive webhook notifications when payment is confirmed.
+
+## Prerequisites
+
+- A Volr account at [dashboard.volr.io](https://dashboard.volr.io)
+- A project with Checkout type created
+- Server API Key (`volr_server_...`) from your project settings
+- A merchant wallet address to receive payments
+
+## Step 1: Install the CLI
+
+```bash
+npm install -g @volr/cli
+volr auth login
+```
+
+## Step 2: Create a Project
+
+```bash
+volr project create --type checkout --name "My Store"
+```
+
+## Step 3: Install the SDK
+
+```bash
+npm install @volr/checkout-sdk
+```
+
+## Step 4: Create a Checkout
+
+```typescript
+import { VolrCheckout } from '@volr/checkout-sdk';
+
+const volr = new VolrCheckout({
+  serverKey: process.env.VOLR_SERVER_KEY!,
+});
+
+const checkout = await volr.create({
+  chainId: 8453,                // Base
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
+  merchantAddress: '0xYOUR_WALLET',
+  amount: '10000000',           // 10 USDC (6 decimals)
+  itemName: 'Product Name',
+  referenceId: 'order_123',     // Your internal order ID
+  successUrl: 'https://yoursite.com/success',
+  cancelUrl: 'https://yoursite.com/cancel',
+});
+
+// Redirect customer to checkout
+const checkoutUrl = `https://checkout.volr.io/${checkout.id}`;
+```
+
+## Step 5: Handle Webhooks
+
+Set your webhook URL in the dashboard or via CLI:
+
+```bash
+volr checkout setup
+```
+
+Then implement the webhook endpoint:
+
+```typescript
+import { VolrCheckout, type WebhookPayload } from '@volr/checkout-sdk';
+
+app.post('/webhook/volr', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['x-volr-signature'] as string;
+  const isValid = await VolrCheckout.verifySignature(
+    req.body.toString(),
+    signature,
+    process.env.VOLR_WEBHOOK_SECRET!,
+  );
+
+  if (!isValid) return res.status(401).send('Invalid signature');
+
+  const event: WebhookPayload = JSON.parse(req.body.toString());
+
+  switch (event.event) {
+    case 'checkout.paid':
+      await fulfillOrder(event.data.referenceId!, event.data.paymentTxHash!);
+      break;
+    case 'checkout.expired':
+      await releaseInventory(event.data.referenceId!);
+      break;
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+## Step 6: Verify Setup
+
+```bash
+volr checkout doctor      # Check configuration
+volr checkout create-test # Create a test checkout on Base Sepolia
+```
+
+## Webhook Events
+
+| Event | When |
+|-------|------|
+| `checkout.paid` | Payment confirmed on-chain |
+| `checkout.expired` | Checkout expired without payment |
+| `checkout.cancelled` | Checkout was cancelled |
+| `checkout.settled` | Funds settled to merchant |
+| `checkout.late_paid` | Payment received after expiry |
+
+## Supported Chains & Tokens
+
+| Chain | ID | Tokens |
+|-------|-----|--------|
+| Base | 8453 | USDC, USDT |
+| Polygon | 137 | USDC, USDT |
+| Arbitrum | 42161 | USDC |
+
+## Resources
+
+- [API Reference](https://docs.volr.io/checkout-api/api-reference)
+- [SDK Reference](https://docs.volr.io/checkout-sdk/intro)
+- [Postman Collection](https://docs.volr.io/volr-checkout.postman_collection.json)
+
+---
+
+# Volr Checkout — Fandom & K-Culture Integration
+
+> Specialized guide for fan commerce, K-pop merchandise, event tickets, and digital collectibles.
+
+## Use Case
+
+Global fans purchasing K-culture merchandise, concert tickets, fan meeting passes, and digital goods. Stablecoin payments eliminate cross-border payment friction — no FX fees, no card declines for international fans.
+
+## Why Stablecoin Checkout for Fandom?
+
+- **Global reach**: Fans in 100+ countries pay without card restrictions
+- **No chargebacks**: Blockchain finality protects sellers
+- **Instant settlement**: No 30-day payment processor holds
+- **Low fees**: ~0.5% vs 3-5% card processing + FX
+- **Fan-friendly**: QR scan from any crypto wallet
+
+## Integration Pattern
+
+### 1. Project Setup
+
+```bash
+volr project create --type checkout --name "K-Star Shop"
+volr checkout setup
+```
+
+### 2. Ticket / Merch Checkout
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.MERCHANT_WALLET!,
+  fiatAmount: '45.00',
+  fiatCurrency: 'USD',
+  itemName: 'BTS World Tour 2026 - General Admission',
+  itemDescription: 'Seoul Olympic Stadium, March 15, 2026',
+  itemImageUrl: 'https://yourcdn.com/ticket-image.jpg',
+  referenceId: `ticket_${ticketId}`,
+  expiryMinutes: 15,  // Shorter expiry for limited inventory
+  metadata: {
+    eventId: 'bts-world-tour-2026',
+    seatSection: 'GA',
+    fanId: user.id,
+  },
+});
+```
+
+### 3. Webhook — Ticket Fulfillment
+
+```typescript
+case 'checkout.paid':
+  const { referenceId, metadata } = event.data;
+  await reserveTicket(referenceId!, metadata!.seatSection as string);
+  await sendTicketEmail(event.data.customerEmail!, referenceId!);
+  break;
+case 'checkout.expired':
+  await releaseTicketHold(event.data.referenceId!);
+  break;
+```
+
+## Fandom-Specific Tips
+
+- **Short expiry** (10-15 min): High-demand items sell out; don't hold inventory too long
+- **itemImageUrl**: Show the actual merch/ticket photo in the checkout — increases conversion
+- **metadata**: Store event/section/seat info for post-purchase fulfillment
+- **Multi-currency**: Use `fiatAmount` + `fiatCurrency` so fans see prices in their local currency
+- **Refund policy**: Use `CANCELLATION` refund type with strict time windows for event tickets
+
+## Supported Languages
+
+Volr Checkout supports EN/KO/JA/ES — covering the primary K-culture fan markets. Pass `?lang=ko` to the checkout URL for Korean fans.
+
+## Resources
+
+- [Base guide](./volr-checkout-base.md)
+- [API Reference](https://docs.volr.io/checkout-api/api-reference)
+
+---
+
+# Volr Checkout — Global Sellers Integration
+
+> Specialized guide for e-commerce, marketplace sellers, and cross-border commerce.
+
+## Use Case
+
+Online sellers accepting stablecoin payments for physical and digital goods. Eliminates payment processor restrictions, reduces fees, and enables instant global payments.
+
+## Why Stablecoin Checkout for Sellers?
+
+- **No merchant account required**: Start accepting payments in minutes
+- **Global payments**: Accept from any country without regional restrictions
+- **Lower fees**: ~0.5% vs 2.9% + $0.30 per transaction
+- **No chargebacks**: Blockchain transactions are final
+- **Instant settlement**: Funds in your wallet immediately after confirmation
+- **No currency conversion**: Receive stablecoins pegged to USD
+
+## Integration Pattern
+
+### 1. Project Setup
+
+```bash
+volr project create --type checkout --name "My Store"
+volr checkout setup
+```
+
+### 2. Product Checkout
+
+```typescript
+// Server-side: create checkout when customer clicks "Pay with Crypto"
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.MERCHANT_WALLET!,
+  fiatAmount: order.totalUsd.toString(),
+  fiatCurrency: 'USD',
+  itemName: order.items.map(i => i.name).join(', '),
+  itemDescription: `Order #${order.id} — ${order.items.length} items`,
+  referenceId: order.id,
+  customerEmail: order.customerEmail,
+  customerName: order.customerName,
+  expiryMinutes: 30,
+  successUrl: `https://mystore.com/orders/${order.id}/success`,
+  cancelUrl: `https://mystore.com/orders/${order.id}`,
+  metadata: {
+    orderId: order.id,
+    items: order.items.map(i => ({ sku: i.sku, qty: i.qty })),
+  },
+});
+```
+
+### 3. Webhook — Order Fulfillment
+
+```typescript
+case 'checkout.paid':
+  await markOrderPaid(event.data.referenceId!);
+  await sendOrderConfirmation(event.data.customerEmail!);
+  await beginShipment(event.data.referenceId!);
+  break;
+case 'checkout.expired':
+  await markOrderExpired(event.data.referenceId!);
+  await restoreInventory(event.data.metadata!.items);
+  break;
+```
+
+## Seller-Specific Tips
+
+- **referenceId**: Always map to your internal order ID for reconciliation
+- **fiatAmount**: Price in fiat so customers see familiar prices; auto-converted to token amount
+- **customerEmail**: Include for receipt delivery and support
+- **metadata**: Store line items for order fulfillment automation
+- **Refunds**: Support partial refunds for individual items
+
+### Multi-Chain Support
+
+Offer customers chain choice for lower fees:
+
+```typescript
+// Let customer choose chain at checkout
+const chains = [
+  { id: 8453, name: 'Base', token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+  { id: 137, name: 'Polygon', token: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
+];
+```
+
+## Resources
+
+- [Base guide](./volr-checkout-base.md)
+- [Fiat payment docs](https://docs.volr.io/checkout-api/fiat-payment)
+- [Refund docs](https://docs.volr.io/checkout-api/refunds)
+
+---
+
+# Volr Checkout — Accommodation Integration
+
+> Specialized guide for hotels, vacation rentals, hostels, and booking platforms.
+
+## Use Case
+
+Accommodation providers accepting stablecoin payments for bookings, deposits, and extra services. Particularly valuable for international travelers who face card restrictions or high FX fees.
+
+## Why Stablecoin Checkout for Accommodation?
+
+- **No FX friction**: International guests pay without currency conversion fees
+- **Guaranteed payment**: No card chargebacks or payment disputes
+- **Deposit handling**: Accept deposits with guaranteed settlement
+- **Digital nomad friendly**: Crypto-native travelers prefer stablecoin payments
+- **Lower processing fees**: Save on OTA commission (15-25%) by accepting direct bookings
+
+## Integration Pattern
+
+### 1. Project Setup
+
+```bash
+volr project create --type checkout --name "Hotel Booking"
+volr checkout setup
+```
+
+### 2. Booking Checkout
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.HOTEL_WALLET!,
+  fiatAmount: booking.totalUsd.toString(),
+  fiatCurrency: 'USD',
+  itemName: `${booking.roomType} — ${booking.nights} nights`,
+  itemDescription: `Check-in: ${booking.checkIn} | Check-out: ${booking.checkOut}`,
+  itemImageUrl: booking.roomImageUrl,
+  referenceId: booking.confirmationNumber,
+  customerEmail: booking.guestEmail,
+  customerName: booking.guestName,
+  expiryMinutes: 60,  // Longer expiry for considered purchases
+  successUrl: `https://hotel.com/bookings/${booking.id}/confirmed`,
+  cancelUrl: `https://hotel.com/bookings/${booking.id}`,
+  metadata: {
+    bookingId: booking.id,
+    roomType: booking.roomType,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+    guests: booking.guestCount,
+  },
+});
+```
+
+### 3. Webhook — Booking Confirmation
+
+```typescript
+case 'checkout.paid':
+  await confirmBooking(event.data.referenceId!);
+  await sendBookingConfirmation(event.data.customerEmail!, {
+    confirmationNumber: event.data.referenceId!,
+    txHash: event.data.paymentTxHash!,
+  });
+  await updateAvailability(event.data.metadata!.roomType, event.data.metadata!.checkIn, event.data.metadata!.checkOut);
+  break;
+case 'checkout.expired':
+  await releaseRoomHold(event.data.referenceId!);
+  break;
+```
+
+## Accommodation-Specific Tips
+
+- **Longer expiry** (30-60 min): Booking decisions take time; don't rush guests
+- **Deposit mode**: Use partial amounts for deposit-only bookings
+- **Refund windows**: Implement cancellation policy with time-based refund amounts
+- **Multi-currency display**: Use `fiatAmount` with local currency for price clarity
+- **itemImageUrl**: Show room photos to reduce booking abandonment
+
+### Cancellation Policy Example
+
+```typescript
+async function handleCancellation(bookingId: string) {
+  const booking = await getBooking(bookingId);
+  const daysUntilCheckIn = daysBetween(new Date(), booking.checkIn);
+
+  let refundPercent = 0;
+  if (daysUntilCheckIn > 7) refundPercent = 100;
+  else if (daysUntilCheckIn > 3) refundPercent = 50;
+  // No refund within 3 days
+
+  if (refundPercent > 0) {
+    const refundAmount = calculateRefundAmount(booking.paidAmount, refundPercent);
+    await volr.createRefund(booking.checkoutId, {
+      amount: refundAmount,
+      reason: `Cancellation ${daysUntilCheckIn} days before check-in`,
+      refundType: 'CANCELLATION',
+    });
+  }
+}
+```
+
+## Resources
+
+- [Base guide](./volr-checkout-base.md)
+- [Refund docs](https://docs.volr.io/checkout-api/refunds)
+
+---
+
+# Volr Checkout — Creator Economy Integration
+
+> Specialized guide for content creators, digital product sellers, membership platforms, and tipping.
+
+## Use Case
+
+Creators selling digital products (courses, templates, art), accepting tips/donations, and running membership/subscription models with stablecoin payments. No platform cuts, instant payouts, global fan monetization.
+
+## Why Stablecoin Checkout for Creators?
+
+- **No platform fees**: Keep 99.5%+ of revenue vs 70-80% on platforms
+- **Instant payouts**: No 30-60 day payment holds
+- **Global monetization**: Accept from fans worldwide without payment restrictions
+- **No minimum payout**: Receive any amount directly to your wallet
+- **Censorship resistant**: No account freezes or payment processor restrictions
+
+## Integration Pattern
+
+### 1. Project Setup
+
+```bash
+volr project create --type checkout --name "Creator Store"
+volr checkout setup
+```
+
+### 2. Digital Product Sale
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.CREATOR_WALLET!,
+  fiatAmount: '29.99',
+  fiatCurrency: 'USD',
+  itemName: 'Ultimate Design System Template',
+  itemDescription: 'Figma + React component library — lifetime access',
+  itemImageUrl: 'https://creator.com/product-preview.jpg',
+  referenceId: `purchase_${purchaseId}`,
+  customerEmail: buyer.email,
+  expiryMinutes: 30,
+  successUrl: 'https://creator.com/download',
+  metadata: {
+    productId: product.id,
+    productType: 'digital_download',
+    buyerId: buyer.id,
+  },
+});
+```
+
+### 3. Tip / Donation (Open Amount)
+
+```typescript
+const checkout = await volr.create({
+  chainId: 8453,
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  merchantAddress: process.env.CREATOR_WALLET!,
+  amount: tipAmountInWei,  // User-selected amount
+  amountMode: 'FIXED',
+  itemName: `Tip for ${creatorName}`,
+  itemDescription: 'Thank you for your support!',
+  referenceId: `tip_${tipId}`,
+  expiryMinutes: 15,
+  metadata: {
+    type: 'tip',
+    creatorId: creator.id,
+    message: tipMessage,
+  },
+});
+```
+
+### 4. Webhook — Delivery
+
+```typescript
+case 'checkout.paid':
+  const { metadata, customerEmail, referenceId } = event.data;
+
+  if (metadata!.productType === 'digital_download') {
+    const downloadLink = await generateDownloadLink(metadata!.productId);
+    await sendDownloadEmail(customerEmail!, downloadLink);
+  } else if (metadata!.type === 'tip') {
+    await recordTip(metadata!.creatorId, event.data.paidAmount!);
+    await notifyCreator(metadata!.creatorId, event.data.paidAmount!, metadata!.message);
+  }
+  break;
+```
+
+## Creator-Specific Tips
+
+- **Digital delivery**: Generate time-limited download links in the `checkout.paid` webhook
+- **Tip jars**: Use a fixed set of amount options (e.g., $5, $10, $25, custom)
+- **Membership**: Create recurring checkouts with your own billing logic
+- **Social proof**: Show recent purchases/tips on your page using `volr.list()`
+- **Multi-chain**: Offer Base (low fees) as default, with Polygon/Arbitrum as alternatives
+
+### Payment Link Generator
+
+Simple payment link for social media / bio links:
+
+```typescript
+// Generate a reusable checkout for a product
+async function createPaymentLink(product: Product) {
+  const checkout = await volr.create({
+    chainId: 8453,
+    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    merchantAddress: process.env.CREATOR_WALLET!,
+    fiatAmount: product.price.toString(),
+    fiatCurrency: 'USD',
+    itemName: product.name,
+    itemImageUrl: product.imageUrl,
+    referenceId: `product_${product.id}_${Date.now()}`,
+    expiryMinutes: 1440,  // 24 hours for async purchases
+  });
+
+  return `https://checkout.volr.io/${checkout.id}`;
+}
+```
+
+## Resources
+
+- [Base guide](./volr-checkout-base.md)
+- [Webhook docs](https://docs.volr.io/checkout-api/webhooks)
