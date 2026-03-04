@@ -12,7 +12,7 @@
 
 ---
 
-**Volr Skills** are pre-built context files that give AI coding assistants everything they need to integrate [Volr Checkout](https://volr.io) — stablecoin payments on Base, Polygon, and Arbitrum.
+**Volr Skills** are pre-built context files that give AI coding assistants everything they need to integrate [Volr Checkout](https://volr.io) — stablecoin payments on Base and BNB Chain.
 
 Drop a single file into your project and your AI assistant instantly knows how to create checkouts, handle webhooks, poll payment status, and build the complete payment flow.
 
@@ -139,9 +139,8 @@ All formats contain the same content — pick the one that matches your IDE.
 
 | Chain | Tokens |
 |-------|--------|
-| **Base** | USDC, USDT |
-| **Polygon** | USDC, USDT |
-| **Arbitrum** | USDC |
+| **Base** | USDC |
+| **BNB Chain** | USDT |
 
 ## Links
 

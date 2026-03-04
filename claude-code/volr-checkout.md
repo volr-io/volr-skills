@@ -220,9 +220,8 @@ The hosted checkout page (`checkout.volr.io/c/{id}`) handles:
 
 | Chain | Chain ID | Tokens |
 |-------|----------|--------|
-| Base | 8453 | USDC, USDT |
-| Polygon | 137 | USDC, USDT |
-| Arbitrum | 42161 | USDC |
+| Base | 8453 | USDC |
+| BNB Chain | 56 | USDT |
 
 ## Full Integration Example (Next.js)
 
