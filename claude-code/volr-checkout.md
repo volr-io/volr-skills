@@ -1,9 +1,3 @@
-# Volr Checkout Integration Rules
-
-> Context for Windsurf AI when working on Volr Checkout integrations.
-
----
-
 # Volr Checkout Integration Guide
 
 > Complete guide for integrating stablecoin payments via Volr Checkout.
@@ -50,10 +44,10 @@ const checkout = await volr.create({
   fiatAmount: '25.00',
   fiatCurrency: 'USD',
   itemName: 'Premium Plan',
-  referenceId: 'order_123',
+  referenceId: 'order_123',           // Your internal order ID
   successUrl: 'https://yoursite.com/success?orderId=order_123',
   cancelUrl: 'https://yoursite.com/cancel',
-  expiryMinutes: 30,
+  expiryMinutes: 30,                  // 5-1440 minutes
   // Optional:
   // itemDescription: 'Monthly subscription',
   // itemImageUrl: 'https://yoursite.com/product.jpg',
@@ -62,6 +56,7 @@ const checkout = await volr.create({
   // metadata: { orderId: 'order_123', plan: 'premium' },
 });
 
+// Redirect customer to the checkout page
 const checkoutUrl = `https://checkout.volr.io/c/${checkout.id}`;
 ```
 
@@ -93,10 +88,12 @@ After the customer pays, they are redirected to your `successUrl`. But **do not 
 To show real-time payment status on your frontend:
 
 ```typescript
+// Poll checkout status from your server
 const pollCheckoutStatus = async (checkoutId: string) => {
   const interval = setInterval(async () => {
     const res = await fetch(`/api/checkout-status/${checkoutId}`);
     const checkout = await res.json();
+
     if (checkout.status === 'PAID' || checkout.status === 'SETTLED') {
       clearInterval(interval);
       showSuccessUI(checkout);
@@ -104,8 +101,18 @@ const pollCheckoutStatus = async (checkoutId: string) => {
       clearInterval(interval);
       showFailureUI(checkout);
     }
-  }, 5000);
+  }, 5000); // Poll every 5 seconds
 };
+```
+
+Your server proxies the status check:
+
+```typescript
+// Server-side: proxy checkout status
+app.get('/api/checkout-status/:id', async (req, res) => {
+  const checkout = await volr.get(req.params.id);
+  res.json({ status: checkout.status, paidAmount: checkout.paidAmount });
+});
 ```
 
 ## Step 4: Handle Webhooks (Server-Side)
@@ -119,28 +126,38 @@ app.post('/webhook/volr', express.raw({ type: 'application/json' }), async (req,
   const signature = req.headers['x-volr-signature'] as string;
   const payload = req.body.toString();
 
+  // 1. Always verify signature
   const isValid = await VolrCheckout.verifySignature(
-    payload, signature, process.env.VOLR_WEBHOOK_SECRET!,
+    payload,
+    signature,
+    process.env.VOLR_WEBHOOK_SECRET!,
   );
+
   if (!isValid) return res.status(401).send('Invalid signature');
 
+  // 2. Handle the event
   const event: WebhookPayload = JSON.parse(payload);
 
   switch (event.event) {
     case 'checkout.paid':
+      // Payment confirmed — fulfill the order
       await fulfillOrder(event.data.referenceId!, event.data);
       break;
     case 'checkout.expired':
+      // No payment received — release any held inventory
       await handleExpired(event.data.referenceId!);
       break;
     case 'checkout.late_paid':
+      // Payment arrived after expiry — review manually
       await flagForReview(event.data.referenceId!, event.data);
       break;
     case 'checkout.settled':
+      // Funds settled to merchant wallet
       await markSettled(event.data.referenceId!);
       break;
   }
 
+  // 3. Return 200 quickly — process asynchronously if needed
   res.status(200).send('OK');
 });
 ```
@@ -164,15 +181,28 @@ app.post('/webhook/volr', express.raw({ type: 'application/json' }), async (req,
 | 3rd | 5 minutes |
 | 4th | 15 minutes |
 
+Each attempt has a 5-second timeout. Always return 200 quickly.
+
 ## Checkout Statuses
 
 ```
-PENDING -> DETECTED -> PAID -> SETTLED
-                    -> LATE_PAID
-PENDING -> EXPIRED
-PENDING -> CANCELLED
-PAID -> REFUNDED
+PENDING → DETECTED → PAID → SETTLED
+                  ↘ LATE_PAID
+PENDING → EXPIRED
+PENDING → CANCELLED
+PAID → REFUNDED
 ```
+
+| Status | Meaning |
+|--------|---------|
+| `PENDING` | Waiting for payment |
+| `DETECTED` | Payment seen on-chain, confirming (~10s) |
+| `PAID` | Payment confirmed |
+| `SETTLED` | Funds sent to merchant wallet |
+| `EXPIRED` | No payment before deadline |
+| `LATE_PAID` | Payment arrived after expiry |
+| `CANCELLED` | Cancelled by merchant |
+| `REFUNDED` | Refund processed |
 
 ## Checkout Page Features
 
@@ -193,6 +223,94 @@ The hosted checkout page (`checkout.volr.io/c/{id}`) handles:
 | Base | 8453 | USDC, USDT |
 | Polygon | 137 | USDC, USDT |
 | Arbitrum | 42161 | USDC |
+
+## Full Integration Example (Next.js)
+
+```typescript
+// app/api/create-checkout/route.ts
+import { VolrCheckout } from '@volr/checkout-sdk';
+
+const volr = new VolrCheckout({ serverKey: process.env.VOLR_SERVER_KEY! });
+
+export async function POST(req: Request) {
+  const { orderId, amount, productName, imageUrl } = await req.json();
+
+  const checkout = await volr.create({
+    fiatAmount: amount,
+    fiatCurrency: 'USD',
+    itemName: productName,
+    itemImageUrl: imageUrl,
+    referenceId: orderId,
+    successUrl: `${process.env.NEXT_PUBLIC_URL}/orders/${orderId}?paid=true`,
+    cancelUrl: `${process.env.NEXT_PUBLIC_URL}/orders/${orderId}`,
+    expiryMinutes: 30,
+  });
+
+  return Response.json({ checkoutUrl: `https://checkout.volr.io/c/${checkout.id}` });
+}
+```
+
+```typescript
+// app/api/webhook/volr/route.ts
+import { VolrCheckout, type WebhookPayload } from '@volr/checkout-sdk';
+
+export async function POST(req: Request) {
+  const signature = req.headers.get('x-volr-signature')!;
+  const body = await req.text();
+
+  const isValid = await VolrCheckout.verifySignature(
+    body, signature, process.env.VOLR_WEBHOOK_SECRET!,
+  );
+  if (!isValid) return new Response('Invalid', { status: 401 });
+
+  const event: WebhookPayload = JSON.parse(body);
+
+  if (event.event === 'checkout.paid') {
+    await db.order.update({
+      where: { id: event.data.referenceId! },
+      data: {
+        status: 'PAID',
+        txHash: event.data.paymentTxHash,
+        paidAt: new Date(event.data.paidAt!),
+      },
+    });
+  }
+
+  return new Response('OK');
+}
+```
+
+```tsx
+// app/orders/[id]/page.tsx — Show payment status
+'use client';
+
+export default function OrderPage({ params, searchParams }) {
+  const [order, setOrder] = useState(null);
+
+  useEffect(() => {
+    // Poll for status updates after redirect
+    if (searchParams.paid) {
+      const interval = setInterval(async () => {
+        const res = await fetch(`/api/orders/${params.id}`);
+        const data = await res.json();
+        setOrder(data);
+        if (data.status === 'PAID') clearInterval(interval);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  return (
+    <div>
+      {order?.status === 'PAID' ? (
+        <div>Payment confirmed! Thank you.</div>
+      ) : (
+        <div>Confirming your payment...</div>
+      )}
+    </div>
+  );
+}
+```
 
 ## Resources
 

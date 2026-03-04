@@ -1,7 +1,7 @@
-# Volr Checkout Integration Rules
-
-> Context for Windsurf AI when working on Volr Checkout integrations.
-
+---
+description: Volr Checkout stablecoin payment integration guide
+globs:
+alwaysApply: false
 ---
 
 # Volr Checkout Integration Guide
@@ -154,15 +154,6 @@ app.post('/webhook/volr', express.raw({ type: 'application/json' }), async (req,
 | `checkout.cancelled` | Merchant cancelled | Clean up |
 | `checkout.settled` | Funds in merchant wallet | Update accounting |
 | `checkout.late_paid` | Payment after expiry | Flag for manual review |
-
-### Webhook Retry Policy
-
-| Attempt | Delay |
-|---------|-------|
-| 1st | Immediate |
-| 2nd | 1 minute |
-| 3rd | 5 minutes |
-| 4th | 15 minutes |
 
 ## Checkout Statuses
 
