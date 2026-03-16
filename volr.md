@@ -45,7 +45,15 @@ After setup is complete, detect the user's project type:
 - Check for `package.json`, `next.config.*`, `nuxt.config.*`, `tsconfig.json`, etc.
 - Check for existing server-side code (API routes, Express, Fastify, NestJS, etc.)
 
-### If project has a backend (Next.js, Express, NestJS, etc.)
+There are three cases:
+
+1. **Fullstack project** (Next.js, Nuxt, Remix, etc. with API routes) → Write server + client code directly
+2. **Frontend repo with separate backend** (React/Vue/Svelte + backend in another repo) → Create `VOLR_BACKEND_GUIDE.md` for the backend team + write frontend code
+3. **Static site with no backend at all** (HTML, Astro static, etc.) → Ask the user: "Volr needs a server to create checkouts securely. Want me to add a simple server (e.g., Express)?" If yes, create a minimal server. If no, create the backend guide.
+
+**Important:** The server key (`VOLR_SERVER_KEY`) must NEVER be exposed to the browser. A server-side endpoint is required for creating checkouts. This is not optional — it's a security requirement.
+
+### Case 1: Fullstack project (has server-side capabilities)
 
 Write both server-side and client-side code:
 
@@ -100,29 +108,75 @@ app.post('/webhook/volr', async (req, res) => {
 window.location.href = `https://checkout.volr.io/c/${checkoutId}`;
 ```
 
-### If project is frontend-only
+### Case 2: Frontend repo with separate backend
 
-Create a guide file for the backend team:
+The frontend and backend are in different repos/projects. Create a guide for the backend team and write the frontend code.
+
+**Create `VOLR_BACKEND_GUIDE.md` in the project root:**
 
 ```markdown
-<!-- Save as VOLR_BACKEND_GUIDE.md in the project root -->
-
-# Volr Backend Setup Guide
+# Volr Checkout — Backend Integration Guide
 
 Your backend needs two endpoints to accept crypto payments via Volr.
 
+## Setup
+
+npm install @volr/checkout-sdk
+
+Add `VOLR_SERVER_KEY` and `VOLR_WEBHOOK_SECRET` to your environment variables.
+Get these from your volr.json / .env file or the Volr Dashboard.
+
 ## 1. POST /api/create-checkout
 
-Creates a payment session. Install `@volr/checkout-sdk`, initialize with `VOLR_SERVER_KEY` from `.env`, call `volr.create()` with amount and redirect URLs, return the checkout ID.
+Creates a payment session. Returns a checkout ID for the frontend to redirect to.
+
+import VolrCheckout from '@volr/checkout-sdk';
+const volr = new VolrCheckout(process.env.VOLR_SERVER_KEY);
+
+const checkout = await volr.create({
+  fiatAmount: req.body.amount,
+  fiatCurrency: 'USD',
+  itemName: req.body.itemName,
+  successUrl: 'https://yoursite.com/success',
+  cancelUrl: 'https://yoursite.com/cancel',
+  referenceId: req.body.orderId,
+});
+
+res.json({ checkoutId: checkout.id });
 
 ## 2. POST /webhook/volr
 
-Receives payment confirmations. Verify signature with `VolrCheckout.verifySignature()`, handle `checkout.paid` to fulfill orders.
+Receives payment confirmations from Volr. Verify the signature, then fulfill the order.
 
-See https://docs.volr.io for full reference.
+const isValid = VolrCheckout.verifySignature(
+  req.body, req.headers['x-volr-signature'], process.env.VOLR_WEBHOOK_SECRET
+);
+
+if (isValid && event.event === 'checkout.paid') {
+  await fulfillOrder(event.data.referenceId);
+}
+
+## Reference
+
+Full docs: https://docs.volr.io
+SDK: https://www.npmjs.com/package/@volr/checkout-sdk
 ```
 
-Then write the frontend code that calls the backend endpoint and redirects.
+Then write the frontend code that calls the backend's `/api/create-checkout` endpoint and redirects to `https://checkout.volr.io/c/${checkoutId}`.
+
+### Case 3: Static site with no backend
+
+Ask the user:
+
+> "Volr needs a server-side endpoint to create checkouts securely (the server key can't be exposed in the browser). Want me to add a simple Express server to your project?"
+
+**If yes:** Create a minimal `server.js` with Express:
+- `POST /api/create-checkout` — creates checkout via SDK
+- `POST /webhook/volr` — handles payment webhooks
+- Add `@volr/checkout-sdk` and `express` to dependencies
+- Add start script to package.json
+
+**If no:** Create `VOLR_BACKEND_GUIDE.md` (same as Case 2) and explain that a backend is needed before the integration can work in production.
 
 ## Step 3: Verify
 
