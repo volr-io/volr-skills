@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Host Grotesk', sans-serif; }
+
+  .banner {
+    width: 1200px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .banner.light { background: #f8f9fa; }
+  .banner.dark { background: #0d1117; }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: #276AFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 32px; height: 32px; }
+  .logo-text {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .light .logo-text { color: #111827; }
+  .dark .logo-text { color: #f0f6fc; }
+
+  .tagline {
+    font-size: 16px;
+    font-weight: 400;
+    margin-top: -4px;
+  }
+  .light .tagline { color: #6b7280; }
+  .dark .tagline { color: #8b949e; }
+
+  .pills {
+    display: flex;
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .light .pill {
+    background: rgba(39, 106, 255, 0.06);
+    border: 1px solid rgba(39, 106, 255, 0.2);
+    color: #276AFF;
+  }
+  .dark .pill {
+    background: rgba(39, 106, 255, 0.12);
+    border: 1px solid rgba(39, 106, 255, 0.3);
+    color: #6b9aff;
+  }
+</style>
+</head>
+<body>
+  <div class="banner light" id="light">
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M6 8h5.5l4.5 11.5L20.5 8H26l-8 16h-4L6 8z" fill="#fff"/></svg>
+      </div>
+      <span class="logo-text">Volr Skills</span>
+    </div>
+    <div class="tagline">AI-native context files for integrating stablecoin payments</div>
+    <div class="pills">
+      <span class="pill">Claude Code</span>
+      <span class="pill">Cursor</span>
+      <span class="pill">Codex</span>
+      <span class="pill">Windsurf</span>
+    </div>
+  </div>
+
+  <div class="banner dark" id="dark">
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M6 8h5.5l4.5 11.5L20.5 8H26l-8 16h-4L6 8z" fill="#fff"/></svg>
+      </div>
+      <span class="logo-text">Volr Skills</span>
+    </div>
+    <div class="tagline">AI-native context files for integrating stablecoin payments</div>
+    <div class="pills">
+      <span class="pill">Claude Code</span>
+      <span class="pill">Cursor</span>
+      <span class="pill">Codex</span>
+      <span class="pill">Windsurf</span>
+    </div>
+  </div>
+</body>
+</html>

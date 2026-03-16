@@ -12,9 +12,36 @@
 
 ---
 
-**Volr Skills** are pre-built context files that give AI coding assistants everything they need to integrate [Volr Checkout](https://volr.io) — stablecoin payments on Base and BNB Chain.
+> **Add crypto checkout to my app using github.com/volr-io/volr-skills**
 
-Drop a single file into your project and your AI assistant instantly knows how to create checkouts, handle webhooks, poll payment status, and build the complete payment flow.
+Copy this prompt into your AI coding assistant. It handles everything — setup, wallet connection, token selection, and integration code.
+
+## What Is This?
+
+**Volr Skills** is a single context file that teaches any AI coding assistant how to integrate [Volr Checkout](https://volr.io) — stablecoin payments on Base and BNB Chain. From zero to working checkout, guided entirely by AI.
+
+## Quick Start
+
+Copy [`volr.md`](./volr.md) into your AI assistant's context:
+
+| IDE | Destination |
+|-----|-------------|
+| **Claude Code** | `.claude/skills/volr.md` |
+| **Cursor** | `.cursor/rules/volr.md` |
+| **Codex** | Copy contents into `AGENTS.md` |
+| **Windsurf** | Copy contents into `.windsurfrules` |
+| **Any other AI** | Add as context / system prompt |
+
+Then prompt your AI:
+
+> *"Add crypto checkout to my app using github.com/volr-io/volr-skills"*
+
+Your AI will walk you through everything:
+
+1. **Login** — email + OTP
+2. **Wallet** — connect existing or create one with Face ID / Touch ID
+3. **Tokens** — pick which stablecoins to accept (with recommendations)
+4. **Code** — write the integration for your stack
 
 ## How It Works
 
@@ -43,98 +70,6 @@ Your Server                    Volr                         Customer
     ├──────────────────────────►│                              │
 ```
 
-## Quick Start
-
-### Automatic (via CLI)
-
-```bash
-npx @volr/cli skill install
-```
-
-The CLI detects your IDE and installs the correct format.
-
-### Manual
-
-Pick the file for your IDE and copy it into your project:
-
-| IDE | File | Destination |
-|-----|------|-------------|
-| **Claude Code** | [`claude-code/volr-checkout.md`](./claude-code/volr-checkout.md) | `.claude/skills/volr-checkout.md` |
-| **Cursor** | [`cursor/volr-checkout.mdc`](./cursor/volr-checkout.mdc) | `.cursor/rules/volr-checkout.mdc` |
-| **Codex** | [`codex/AGENTS.md`](./codex/AGENTS.md) | `AGENTS.md` (project root) |
-| **Windsurf** | [`windsurf/.windsurfrules`](./windsurf/.windsurfrules) | `.windsurfrules` (project root) |
-
-Then just ask your AI:
-
-> *"Add Volr Checkout to accept payments for my product"*
-
-## What Your AI Learns
-
-The skill teaches your AI assistant the complete payment integration:
-
-```typescript
-// 1. Create a checkout
-const checkout = await volr.create({
-  fiatAmount: '25.00',
-  fiatCurrency: 'USD',
-  itemName: 'Premium Plan',
-  itemImageUrl: 'https://yoursite.com/product.jpg',
-  successUrl: 'https://yoursite.com/success',
-  referenceId: 'order_123',
-});
-
-// 2. Redirect customer
-window.location.href = `https://checkout.volr.io/c/${checkout.id}`;
-```
-
-```typescript
-// 3. Handle webhook on your server
-app.post('/webhook/volr', async (req, res) => {
-  const isValid = await VolrCheckout.verifySignature(
-    req.body.toString(),
-    req.headers['x-volr-signature'],
-    process.env.VOLR_WEBHOOK_SECRET!,
-  );
-
-  if (event.event === 'checkout.paid') {
-    await fulfillOrder(event.data.referenceId);
-  }
-
-  res.status(200).send('OK');
-});
-```
-
-### Full Coverage
-
-| Topic | Included |
-|-------|----------|
-| Checkout creation (fiat & token pricing) | Yes |
-| All API parameters with descriptions | Yes |
-| Frontend payment status polling | Yes |
-| Webhook handling + signature verification | Yes |
-| Status lifecycle (PENDING → PAID → SETTLED) | Yes |
-| Checkout page features (token selection, QR, wallet) | Yes |
-| Full Next.js integration example | Yes |
-| Supported chains & tokens reference | Yes |
-
-## Repository Structure
-
-```
-volr-skills/
-├── core/                    # Canonical skill (IDE-agnostic)
-│   └── volr-checkout.md
-├── claude-code/             # Claude Code format
-│   └── volr-checkout.md
-├── cursor/                  # Cursor rules format (.mdc)
-│   └── volr-checkout.mdc
-├── codex/                   # OpenAI Codex format
-│   └── AGENTS.md
-└── windsurf/                # Windsurf rules format
-    └── .windsurfrules
-```
-
-All formats contain the same content — pick the one that matches your IDE.
-
 ## Supported Chains
 
 | Chain | Tokens |
@@ -144,10 +79,10 @@ All formats contain the same content — pick the one that matches your IDE.
 
 ## Links
 
-- [Volr Dashboard](https://dashboard.volr.io) — Create your project
-- [Documentation](https://docs.volr.io) — Full API & SDK reference
-- [Checkout SDK](https://www.npmjs.com/package/@volr/checkout-sdk) — npm package
-- [Volr CLI](https://www.npmjs.com/package/@volr/cli) — CLI tool
+- [Volr Dashboard](https://dashboard.volr.io)
+- [Documentation](https://docs.volr.io)
+- [Checkout SDK](https://www.npmjs.com/package/@volr/checkout-sdk)
+- [Volr CLI](https://www.npmjs.com/package/create-volr)
 
 ## License
 
