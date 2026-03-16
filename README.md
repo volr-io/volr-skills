@@ -12,9 +12,13 @@
 
 ---
 
-> **Add crypto checkout to my app using github.com/volr-io/volr-skills**
+<h3 align="center">Paste this into your AI coding assistant:</h3>
 
-Copy this prompt into your AI coding assistant. It handles everything — setup, wallet connection, token selection, and integration code.
+```
+Add crypto checkout to my app using github.com/volr-io/volr-skills
+```
+
+<p align="center">That's it. Your AI handles the rest — setup, wallet, tokens, and code.</p>
 
 ## What Is This?
 
