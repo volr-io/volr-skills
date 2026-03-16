@@ -9,15 +9,24 @@ Run `npx volr next --json` and follow the response.
 
 The response is `{ "ok": true, "data": { "currentStep": ..., "nextAction": ..., "progress": ... } }`.
 
+**IMPORTANT: Never run `npx volr auth login` without `--email` flag. Never run CLI commands that are not provided by `command_template` in the response. Only run commands that `nextAction` tells you to run.**
+
 Loop:
 1. Run `npx volr next --json`
-2. Read `data.nextAction` from the response:
-   - `ask_user`: Ask the user the question. Present options if provided. Items marked `recommended: true` should be highlighted with the reason. Always offer "I'm not sure, explain more" as an option. After the user answers, run the `command_template` with their input.
+2. Read `data.nextAction.type` from the response:
+   - `ask_user`: Ask the user the question in `nextAction.question`. Present options if provided. Items marked `recommended: true` should be highlighted with the reason. Always offer "I'm not sure, explain more" as an option. After the user answers, substitute their answer into `command_template` and run it.
    - `open_browser`: Tell the user a browser will open. Run the `command` and wait for it to complete.
    - `run_command`: Run the `command` directly.
    - `error`: Show the error message. If `recovery_command` is provided, run it.
    - `done`: Setup is complete. Move to Step 2.
 3. Repeat until `done`.
+
+### Authentication
+
+The auth flow has two steps:
+1. `npx volr next --json` returns `ask_user` with question "What is your email address?" → run `npx volr auth login --email "{email}"` (this sends an OTP code to the email)
+2. Ask the user for the 6-digit OTP code they received → run `npx volr auth verify --email "{email}" --otp "{code}"`
+3. Run `npx volr next --json` again to proceed to the next step
 
 ### Wallet Connection
 
