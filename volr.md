@@ -200,25 +200,11 @@ Ask the user:
 
 **If no:** Create `VOLR_BACKEND_GUIDE.md` (same as Case 2) and explain that a backend is needed before the integration can work in production.
 
-## Step 3: Verify
+## Step 3: Done
 
-After writing the code, suggest running a test checkout:
+After writing the code, tell the user:
 
-```bash
-npx volr checkout create-test
-```
-
-This creates a $1 test checkout to verify the integration works end-to-end.
-
-After verification, let the user know:
-
-> "Setup is complete! You can view payment history, manage tokens, and configure settings on your dashboard: https://dashboard.volr.io"
-
-Also suggest checking the setup health:
-
-```bash
-npx volr checkout doctor
-```
+> "Integration complete! Run your app and test the checkout flow. You can view payment history and manage settings on your dashboard: https://dashboard.volr.io"
 
 ## Rules
 
