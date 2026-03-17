@@ -114,11 +114,8 @@ app.post('/webhook/volr', async (req, res) => {
 
 **Client-side — Redirect to checkout:**
 
-The SDK response does not include a `checkoutUrl` field. Build the URL manually:
-
 ```typescript
-const checkoutUrl = `https://checkout.volr.io/c/${checkout.id}`;
-window.location.href = checkoutUrl;
+window.location.href = checkout.checkoutUrl;
 ```
 
 ### Case 2: Frontend repo with separate backend
@@ -212,7 +209,7 @@ This creates a $1 test checkout to verify the integration works end-to-end.
 - **Never hardcode tokens/chains**: Always get available options from `npx volr next --json`.
 - **Server key security**: `VOLR_SERVER_KEY` must be in `.env` and never committed to git.
 - **localhost URLs not supported**: The Volr API rejects `http://localhost:*` for `successUrl` and `cancelUrl`. For local development, either omit these fields (the checkout page will show a "return to merchant" button instead of auto-redirecting) or use a tunnel service (ngrok, cloudflare tunnel) to get an HTTPS URL.
-- **Checkout URL**: The SDK does not return a `checkoutUrl` field. Build it manually: `https://checkout.volr.io/c/${checkout.id}`
+- **Checkout URL**: Use `checkout.checkoutUrl` from the SDK response to redirect customers
 - **verifySignature is async**: Always `await` the result. Without `await`, the Promise object is truthy and signature verification is bypassed. This is a security issue.
 
 ## Checkout Parameters
