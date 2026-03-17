@@ -210,6 +210,16 @@ npx volr checkout create-test
 
 This creates a $1 test checkout to verify the integration works end-to-end.
 
+After verification, let the user know:
+
+> "Setup is complete! You can view payment history, manage tokens, and configure settings on your dashboard: https://dashboard.volr.io"
+
+Also suggest checking the setup health:
+
+```bash
+npx volr checkout doctor
+```
+
 ## Rules
 
 - **Off-ramp**: Volr does not convert crypto to fiat currency. If the user asks about cashing out stablecoins:
