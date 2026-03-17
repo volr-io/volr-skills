@@ -62,6 +62,16 @@ There are three cases:
 
 **Important:** The server key (`VOLR_SERVER_KEY`) must NEVER be exposed to the browser. A server-side endpoint is required for creating checkouts. This is not optional — it's a security requirement.
 
+### Product Image (itemImageUrl)
+
+The checkout page displays a product thumbnail. An empty thumbnail looks unprofessional to customers. Before writing the checkout code:
+
+1. **Look for an existing image** in the project — check for logos, product images, or OG images in `public/`, `static/`, `assets/`, or referenced in HTML meta tags.
+2. **If found**, use its public URL as `itemImageUrl`.
+3. **If not found**, ask the user: "The checkout page shows a product image to customers. Do you have an image URL to use? If not, I can leave it blank for now and you can add one later."
+
+Always set `itemImageUrl` when a suitable image is available. Do not silently skip it.
+
 ### Case 1: Fullstack project (has server-side capabilities)
 
 Write both server-side and client-side code:
@@ -77,11 +87,12 @@ const checkout = await volr.create({
   fiatAmount: '25.00',
   fiatCurrency: 'USD',
   itemName: 'Product Name',
+  itemImageUrl: 'https://yoursite.com/product.png', // Product thumbnail shown on checkout page
   successUrl: 'https://yoursite.com/success',
   cancelUrl: 'https://yoursite.com/cancel',
 });
 
-// Return checkout.id to the frontend
+// Redirect customer to checkout.checkoutUrl
 ```
 
 **Server-side — Webhook handler:**
