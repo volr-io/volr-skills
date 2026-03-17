@@ -69,9 +69,9 @@ Write both server-side and client-side code:
 **Server-side — Create checkout endpoint:**
 
 ```typescript
-import VolrCheckout from '@volr/checkout-sdk';
+import { VolrCheckout } from '@volr/checkout-sdk';
 
-const volr = new VolrCheckout(process.env.VOLR_SERVER_KEY);
+const volr = new VolrCheckout({ serverKey: process.env.VOLR_SERVER_KEY! });
 
 const checkout = await volr.create({
   fiatAmount: '25.00',
@@ -88,15 +88,16 @@ const checkout = await volr.create({
 
 ```typescript
 app.post('/webhook/volr', async (req, res) => {
-  const isValid = VolrCheckout.verifySignature(
-    req.body,
-    req.headers['x-volr-signature'],
-    process.env.VOLR_WEBHOOK_SECRET,
+  const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  const isValid = await VolrCheckout.verifySignature(
+    body,
+    req.headers['x-volr-signature'] as string,
+    process.env.VOLR_WEBHOOK_SECRET!,
   );
 
   if (!isValid) return res.status(401).send('Invalid signature');
 
-  const event = JSON.parse(req.body);
+  const event = JSON.parse(body);
 
   switch (event.event) {
     case 'checkout.paid':
@@ -113,8 +114,11 @@ app.post('/webhook/volr', async (req, res) => {
 
 **Client-side — Redirect to checkout:**
 
+The SDK response does not include a `checkoutUrl` field. Build the URL manually:
+
 ```typescript
-window.location.href = `https://checkout.volr.io/c/${checkoutId}`;
+const checkoutUrl = `https://checkout.volr.io/c/${checkout.id}`;
+window.location.href = checkoutUrl;
 ```
 
 ### Case 2: Frontend repo with separate backend
@@ -139,8 +143,8 @@ Get these from your volr.json / .env file or the Volr Dashboard.
 
 Creates a payment session. Returns a checkout ID for the frontend to redirect to.
 
-import VolrCheckout from '@volr/checkout-sdk';
-const volr = new VolrCheckout(process.env.VOLR_SERVER_KEY);
+import { VolrCheckout } from '@volr/checkout-sdk';
+const volr = new VolrCheckout({ serverKey: process.env.VOLR_SERVER_KEY! });
 
 const checkout = await volr.create({
   fiatAmount: req.body.amount,
@@ -157,8 +161,9 @@ res.json({ checkoutId: checkout.id });
 
 Receives payment confirmations from Volr. Verify the signature, then fulfill the order.
 
-const isValid = VolrCheckout.verifySignature(
-  req.body, req.headers['x-volr-signature'], process.env.VOLR_WEBHOOK_SECRET
+const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+const isValid = await VolrCheckout.verifySignature(
+  body, req.headers['x-volr-signature'], process.env.VOLR_WEBHOOK_SECRET!
 );
 
 if (isValid && event.event === 'checkout.paid') {
@@ -206,6 +211,9 @@ This creates a $1 test checkout to verify the integration works end-to-end.
 - **Explain when confused**: If the user seems unfamiliar with crypto concepts, explain simply without jargon. Always be patient.
 - **Never hardcode tokens/chains**: Always get available options from `npx volr next --json`.
 - **Server key security**: `VOLR_SERVER_KEY` must be in `.env` and never committed to git.
+- **localhost URLs not supported**: The Volr API rejects `http://localhost:*` for `successUrl` and `cancelUrl`. For local development, either omit these fields (the checkout page will show a "return to merchant" button instead of auto-redirecting) or use a tunnel service (ngrok, cloudflare tunnel) to get an HTTPS URL.
+- **Checkout URL**: The SDK does not return a `checkoutUrl` field. Build it manually: `https://checkout.volr.io/c/${checkout.id}`
+- **verifySignature is async**: Always `await` the result. Without `await`, the Promise object is truthy and signature verification is bypassed. This is a security issue.
 
 ## Checkout Parameters
 
