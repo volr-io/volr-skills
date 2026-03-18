@@ -18,7 +18,7 @@ Loop:
    - `open_browser`: Tell the user a browser will open for this step. Run the `command` field (e.g., `npx volr wallet setup`) and wait for it to complete. The command opens the browser and polls until the step is done.
    - `run_command`: Run the `command` directly.
    - `error`: Show the error message. If `recovery_command` is provided, run it.
-   - `done`: Setup is complete. Move to Step 2.
+   - `done`: Setup is complete. The response includes `serverKey`, `webhookSecret`, and `env_commands`. Save these to the project's `.env` file (create it if it doesn't exist). Then move to Step 2.
 3. Repeat until `done`.
 
 ### Authentication
