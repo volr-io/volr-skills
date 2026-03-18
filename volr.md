@@ -15,7 +15,7 @@ Loop:
 1. Run `npx volr next --json`
 2. Read `data.nextAction.type` from the response:
    - `ask_user`: Ask the user the question in `nextAction.question`. Present options if provided. Items marked `recommended: true` should be highlighted with the reason. Always offer "I'm not sure, explain more" as an option. After the user answers, substitute their answer into `command_template` and run it.
-   - `open_browser`: Tell the user a browser will open. Run the `command` and wait for it to complete.
+   - `open_browser`: Tell the user a browser will open for this step. Run the `command` field (e.g., `npx volr wallet setup`) and wait for it to complete. The command opens the browser and polls until the step is done.
    - `run_command`: Run the `command` directly.
    - `error`: Show the error message. If `recovery_command` is provided, run it.
    - `done`: Setup is complete. Move to Step 2.
