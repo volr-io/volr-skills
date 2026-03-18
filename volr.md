@@ -87,9 +87,10 @@ const checkout = await volr.create({
   fiatAmount: '25.00',
   fiatCurrency: 'USD',
   itemName: 'Product Name',
-  itemImageUrl: 'https://yoursite.com/product.png', // Product thumbnail shown on checkout page
-  successUrl: 'https://yoursite.com/success',
-  cancelUrl: 'https://yoursite.com/cancel',
+  itemImageUrl: 'https://example.com/product.png', // Product thumbnail shown on checkout page
+  // successUrl and cancelUrl: use the user's ACTUAL domain, or omit for local dev
+  // successUrl: 'https://their-actual-domain.com/success',
+  // cancelUrl: 'https://their-actual-domain.com/cancel',
 });
 
 // Redirect customer to checkout.checkoutUrl
@@ -158,8 +159,8 @@ const checkout = await volr.create({
   fiatAmount: req.body.amount,
   fiatCurrency: 'USD',
   itemName: req.body.itemName,
-  successUrl: 'https://yoursite.com/success',
-  cancelUrl: 'https://yoursite.com/cancel',
+  // successUrl: 'https://their-actual-domain.com/success',
+  // cancelUrl: 'https://their-actual-domain.com/cancel',
   referenceId: req.body.orderId,
 });
 
@@ -215,7 +216,7 @@ After writing the code, tell the user:
 - **Explain when confused**: If the user seems unfamiliar with crypto concepts, explain simply without jargon. Always be patient.
 - **Never hardcode tokens/chains**: Always get available options from `npx volr next --json`.
 - **Server key security**: `VOLR_SERVER_KEY` must be in `.env` and never committed to git.
-- **localhost URLs not supported**: The Volr API rejects `http://localhost:*` for `successUrl` and `cancelUrl`. For local development, either omit these fields (the checkout page will show a "return to merchant" button instead of auto-redirecting) or use a tunnel service (ngrok, cloudflare tunnel) to get an HTTPS URL.
+- **successUrl / cancelUrl**: These are OPTIONAL. For local development, use `http://localhost:<port>/success` and `http://localhost:<port>/cancel` with the user's actual dev server port. For production, use the user's actual domain. NEVER use placeholder domains like `yoursite.com`, `yourdomain.com`, `example.com`. If unsure about the domain, ask the user or omit the fields (the checkout page will show a "return to merchant" button instead of auto-redirecting).
 - **Checkout URL**: Use `checkout.checkoutUrl` from the SDK response to redirect customers
 - **verifySignature is async**: Always `await` the result. Without `await`, the Promise object is truthy and signature verification is bypassed. This is a security issue.
 
