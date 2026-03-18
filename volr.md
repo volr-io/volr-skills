@@ -216,6 +216,7 @@ After writing the code, tell the user:
 - **Explain when confused**: If the user seems unfamiliar with crypto concepts, explain simply without jargon. Always be patient.
 - **Never hardcode tokens/chains**: Always get available options from `npx volr next --json`.
 - **Server key security**: `VOLR_SERVER_KEY` must be in `.env` and never committed to git.
+- **volr.json is NOT a secret**: `volr.json` contains only `projectId` and `projectName`. It MUST be committed to git so team members can use the CLI without re-running setup. Do NOT add `volr.json` to `.gitignore`.
 - **successUrl / cancelUrl**: These are OPTIONAL. For local development, use `http://localhost:<port>/success` and `http://localhost:<port>/cancel` with the user's actual dev server port. For production, use the user's actual domain. NEVER use placeholder domains like `yoursite.com`, `yourdomain.com`, `example.com`. If unsure about the domain, ask the user or omit the fields (the checkout page will show a "return to merchant" button instead of auto-redirecting).
 - **Checkout URL**: Use `checkout.checkoutUrl` from the SDK response to redirect customers
 - **verifySignature is async**: Always `await` the result. Without `await`, the Promise object is truthy and signature verification is bypassed. This is a security issue.
