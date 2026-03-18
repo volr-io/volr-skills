@@ -9,7 +9,7 @@ Run `npx volr next --json` and follow the response.
 
 The response is `{ "ok": true, "data": { "currentStep": ..., "nextAction": ..., "progress": ... } }`.
 
-**IMPORTANT: Never run `npx volr auth login` without `--email` flag. Never run CLI commands that are not provided by `command_template` in the response. Only run commands that `nextAction` tells you to run.**
+**IMPORTANT: Never run `npx volr auth login` without `--email` flag. Never run CLI commands that are not provided by `command_template` in the response. Only run commands that `nextAction` tells you to run. Do NOT ask the user preliminary questions like "Do you have a Volr account?" — just run `npx volr next --json` and the response will tell you exactly what step to do next (auth, wallet, project, tokens).**
 
 Loop:
 1. Run `npx volr next --json`
